@@ -12,7 +12,7 @@ FinTutor is a Laravel-based AI-powered tutoring web application designed to stre
 
 | Role        | Username                     | Password |
 | :---------- | :--------------------------- | :------- |
-| **Tutor**   | tutor@freedev.app            | password |
+| **Tutor**   | tutor@fintutor.freedev.app   | password |
 | **Student** | student@fintutor.freedev.app | password |
 
 ---
