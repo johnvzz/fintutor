@@ -26,7 +26,6 @@ class ProfileController extends Controller
     {
         $user = auth()->user();
 
-        $student = $user->student;
 
         $user->update([
             'name' => $request->name,
@@ -34,14 +33,23 @@ class ProfileController extends Controller
             'phone' => $request->phone
         ]);
 
-        $student->update([
-            'dob' => $request->filled('dob')
-                ? Carbon::createFromFormat('d-m-Y', $request->dob)->format('Y-m-d')
-                : null,
-            'grade' => $request->grade,
-            'school' => $request->school,
-            'parent_name' => $request->parent_name,
-            'parent_phone' => $request->parent_phone,
+        Student::upsert([
+            [
+                'user_id' => $user->id,
+                'dob' => $request->filled('dob')
+                    ? Carbon::createFromFormat('d-m-Y', $request->dob)->format('Y-m-d')
+                    : null,
+                'grade' => $request->grade,
+                'school' => $request->school,
+                'parent_name' => $request->parent_name,
+                'parent_phone' => $request->parent_phone,
+            ],
+        ], ['user_id'], [
+            'dob',
+            'grade',
+            'school',
+            'parent_name',
+            'parent_phone',
         ]);
 
         return back()->with('success', 'Profile updated successfully');
