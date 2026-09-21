@@ -52,16 +52,23 @@ class PreSessionPlanRequest extends FormRequest
                 return;
             }
 
+            $sessionId = $this->route('session');
+
             $date = Carbon::createFromFormat('d-m-Y', $this->date)->format('Y-m-d');
 
-            $exists = TutorSession::where('scheduled_at', $date)
+            $query = TutorSession::where('scheduled_at', $date)
                 ->where('start_time', '<', $this->end_time)
                 ->where('end_time', '>', $this->start_time)
                 ->where(function ($query) {
                     $query->where('tutor_id', $this->user()->getAuthIdentifier())
                         ->orWhere('student_id', $this->student);
-                })
-                ->exists();
+                });
+
+            if ($sessionId) {
+                $query->where('id', '!=', $sessionId);
+            }
+
+            $exists = $query->exists();
 
             if ($exists) {
                 $validator->errors()->add(

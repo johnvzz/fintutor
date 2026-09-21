@@ -20,6 +20,7 @@ class TutorSession extends Model
         'end_time',
         'tutor_id',
         'student_id',
+        'additional_instructions',
         'status',
         'objectives',
         'lesson_outline',

@@ -33,10 +33,8 @@ Route::middleware(['auth', 'role:tutor'])->prefix('tutor')->name('tutor.')
 
         Route::resource('sessions', TutorSessionController::class);
 
-        Route::post(
-            'sessions/generate-presessionplan',
-            [TutorSessionController::class, 'generatePreSessionPlan']
-        )->name('sessions.generate-pre-session-plan');
+        Route::post('sessions/generate-presessionplan', [TutorSessionController::class, 'generatePreSessionPlan'])
+            ->name('sessions.generate-pre-session-plan');
 
         Route::post('sessions/start-session', [TutorSessionController::class, 'startSession'])
             ->name('sessions.start-session');

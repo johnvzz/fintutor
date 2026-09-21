@@ -72,7 +72,8 @@
                                             <form method="post" id="sessionStartForm">
                                                 @csrf
                                                 <input type="hidden" name="tutor_session" value="{{ $session->id }}" />
-                                                <button type="submit" class="btn btn-primary">Start Session</button>
+                                                <button type="submit" class="btn btn-primary start-button">Start
+                                                    Session</button>
                                             </form>
                                         </div>
                                     @elseif($session->status === 'inprogress' && empty($session->ended_at))
@@ -222,6 +223,10 @@
             const form = event.currentTarget;
             const formData = new FormData(form);
 
+            const startButton = document.querySelector('.start-button');
+            startButton.textContent = 'Processing...';
+            startButton.disabled = true;
+
             try {
                 const response = await fetch(
                     "{{ route('tutor.sessions.start-session') }}", {
@@ -231,14 +236,15 @@
                         },
                         body: formData
                     }
-
                 );
 
                 const data = await response.json();
 
-                if (!resposne.ok) {
+                if (!response.ok) {
                     throw new Error(data.message || `Response Status : $response.status`);
                 }
+
+                location.href = "{{ route('tutor.sessions.livesession', $session->id) }}";
             } catch (error) {
                 console.log(error.message);
             }

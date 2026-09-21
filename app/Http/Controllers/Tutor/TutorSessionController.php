@@ -12,6 +12,7 @@ use App\Services\GeminiService;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
 
 class TutorSessionController extends Controller
 {
@@ -57,14 +58,15 @@ class TutorSessionController extends Controller
                 'tutor_id' => auth()->user()->id,
                 'student_id' => $request->student,
                 'status' => 'scheduled',
+                'additional_instructions' => $request->additional_instructions,
                 'objectives' => $objectives,
                 'lesson_outline' => $lesson_outline,
                 'practice_questions' => $practice_questions,
                 'start_time' => $request->start_time,
                 'end_time' => $request->end_time
             ];
-            dd($input_data);
-            // $session = TutorSession::create($input_data);
+
+            $session = TutorSession::create($input_data);
 
             return response()->json([
                 'message' => 'Tutor session scheduled successfully'
@@ -99,7 +101,10 @@ class TutorSessionController extends Controller
 
         Gate::authorize('view', $session);
 
-        return view('tutor.tutor_session_edit', compact('session'));
+        $students = User::where('role', 'student')
+            ->get();
+
+        return view('tutor.tutor_session_edit', compact('session', 'students'));
     }
 
     /**
@@ -107,7 +112,37 @@ class TutorSessionController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $session = TutorSession::findOrFail($id);
+
+        Gate::authorize('update', $session);
+
+        $input_data = [
+            'topic' => $request->topic,
+            'scheduled_at' => Carbon::createFromFormat('d-m-Y', $request->date)->format('Y-m-d'),
+            'tutor_id' => auth()->user()->id,
+            'student_id' => $request->student,
+            'additional_instructions' => $request->additional_instructions,
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time
+        ];
+
+        if ($request->objectives) {
+            $input_data['objectives'] = json_decode($request->objectives);
+        }
+
+        if ($request->lesson_outlines) {
+            $input_data['lesson_outline'] = json_decode($request->lesson_outlines);
+        }
+
+        if ($request->practice_questions) {
+            $input_data['practice_questions'] = json_decode($request->practice_questions);
+        }
+
+        $session->update($input_data);
+
+        return response()->json([
+            'message' => 'Session updated successfully'
+        ]);
     }
 
     /**
@@ -122,7 +157,7 @@ class TutorSessionController extends Controller
      *  Generates pre-session plan for each session using an AI model. 
      *  Plan includes objectives, lesson outline and practice questions.
      */
-    public function generatePreSessionPlan(PreSessionPlanRequest $request, GeminiService $gemini)
+    public function generatePreSessionPlan(Request $request, GeminiService $gemini)
     {
         $student_data = Student::find($request->student);
 
@@ -188,10 +223,16 @@ class TutorSessionController extends Controller
 
             Gate::authorize('startSession', $session);
 
-            $session->update(['status' => 'inprogress']);
+            $started_at = date('Y-m-d H:i:s');
 
-            return redirect()
-                ->route('tutor.sessions.livesession', $session->id);
+            $session->update([
+                'status' => 'inprogress',
+                'started_at' => $started_at
+            ]);
+
+            return response()->json([
+                'message' => 'Session started successfully'
+            ]);
         } catch (QueryException $e) {
 
             return response()->json([
@@ -201,15 +242,36 @@ class TutorSessionController extends Controller
     }
 
     /**
-     *  Shows live session page for particular session
+     *  Display live session screen for an active session.
      */
     public function liveSession(TutorSession $session)
     {
         Gate::authorize('liveSession', $session);
 
+        // Build the session end datetime using the scheduled date and session end time
+        $sessionEnd = Carbon::parse($session->scheduled_at->toDateString() . ' ' . $session->end_time);
+
+        /**
+         * Check if the session is in progress and the actual session end time has passed.
+         *
+         * If the session time has expired, force-update the session status to completed.
+         */
+
+        if ($session->status === 'inprogress' && now()->gte($sessionEnd)) {
+
+            $session->update([
+                'ended_at' => $sessionEnd,
+                'status' => 'completed'
+            ]);
+
+            // Redirecting to detail page after force completion.
+            return redirect()->route('tutor.sessions.show', $session->id);
+        }
+
         $session->duration = Carbon::parse($session->start_time)
             ->diffInMinutes(Carbon::parse($session->end_time));
 
+        // Returns to the live session screen if the session is still within its scheduled time period.
         return view('live_session', compact('session'));
     }
 
@@ -244,16 +306,11 @@ class TutorSessionController extends Controller
     {
         Gate::authorize('endSession', $session);
 
-        $request->validate([
-            'livenotes' => 'required'
-        ]);
-
         try {
 
             $ended_at = date('Y-m-d H:i:s');
 
             $session->update([
-                'livenotes' => $request->livenotes,
                 'ended_at' => $ended_at,
                 'status' => 'completed'
             ]);

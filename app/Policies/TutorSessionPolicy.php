@@ -16,6 +16,14 @@ class TutorSessionPolicy
     }
 
     /**
+     * Determine whether the session is currently in scheduled status.
+     */
+    private function isScheduledSession(TutorSession $tutorSession): bool
+    {
+        return $tutorSession->status === 'scheduled';
+    }
+
+    /**
      * Determine whether the session is currently in progress.
      */
     private function isLiveSession(TutorSession $tutorSession): bool
@@ -60,7 +68,7 @@ class TutorSessionPolicy
      */
     public function update(User $user, TutorSession $tutorSession): bool
     {
-        return $this->isOwner($user, $tutorSession);
+        return $this->isOwner($user, $tutorSession) && $this->isScheduledSession($tutorSession);
     }
 
     /**
@@ -91,7 +99,7 @@ class TutorSessionPolicy
     public function startSession(User $user, TutorSession $tutorSession): bool
     {
         return $this->isOwner($user, $tutorSession)
-            &&  $tutorSession->status === 'scheduled';
+            &&  $this->isScheduledSession($tutorSession);
     }
 
     /** Determine whether the tutor can access the live session. */

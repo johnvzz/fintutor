@@ -170,6 +170,7 @@
         });
 
         flatpickr("#session_date", {
+            minDate: 'today',
             dateFormat: 'd-m-Y'
         });
 

@@ -18,12 +18,12 @@ class GeminiService
 
         try {
             $response = Gemini::generativeModel(model: 'gemini-3.6-flash')
-                        ->withGenerationConfig(
-                            new GenerationConfig(
-                                responseMimeType: ResponseMimeType::APPLICATION_JSON
-                            )
-                        )        
-                        ->generateContent($prompt);
+                ->withGenerationConfig(
+                    new GenerationConfig(
+                        responseMimeType: ResponseMimeType::APPLICATION_JSON
+                    )
+                )
+                ->generateContent($prompt);
 
 
             $content = json_decode(
@@ -34,14 +34,14 @@ class GeminiService
             );
 
             return [
-                'status' => 'success',
-                'statusCode' => 200,
+                'status' => 200,
+                'statusCode' => 'success',
                 'content' => $content,
-            ];           
-       } catch (ClientException | RequestException $e) {
+            ];
+        } catch (ClientException | RequestException $e) {
             // Handles 4xx / 5xx HTTP responses from Google API
             $googleErrorBody = [];
-            
+
             if ($e->hasResponse()) {
                 $rawBody = (string) $e->getResponse()->getBody();
                 $googleErrorBody = json_decode($rawBody, true) ?? [];
@@ -56,17 +56,16 @@ class GeminiService
             ];
 
             return [
-                'status' => 'error',
-                'statusCode' => 500,
+                'status' => 500,
+                'statusCode' => 'error',
                 'message' => $errorDetails['message'] ?? 'An API error occurred.',
                 'error' => $errorDetails,
             ];
-
         } catch (Throwable $e) {
             // Handles non-HTTP exceptions (e.g., PHP runtime errors, local SSL errors)
             return [
-                'status' => 'error',
-                'statusCode' => 500,
+                'status' => 500,
+                'statusCode' => 'error',
                 'message' => $e->getMessage(),
                 'error' => [
                     'code' => $e->getCode() ?: 500,
